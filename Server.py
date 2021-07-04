@@ -15,6 +15,8 @@ def readResponseFromServer2(ResponseFromServer2):
         return "###"
 
 
+global flagA
+flagA = bool(False)
 address = ('10.112.244.60', 31500)  # 服务端地址和端口
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(address)  # 绑定服务端地址和端口
@@ -26,11 +28,16 @@ while True:
     if not data:
         break
     print('[Received]', data)
-    # tempDataRcvFromA = "ClientA:" + data
-    thread.start_new_thread(readFile, (data.encode('utf - 8'), ))
 
-    # send = input('Input: ')
-    send = readResponseFromServer2("Files/ResponseFromServer2")
-    if send != "###":
-        s.sendto(send.encode(), addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
+    # tempDataRcvFromA = "ClientA:" + data
+    thread.start_new_thread(readFile, (data.encode('utf - 8'),))
+
+    flagA = bool(True)
+    global flagB
+    while True:
+        if flagA == bool(True) and flagB == bool(True):
+            # send = input('Input: ')
+            send = readResponseFromServer2("Files/ResponseFromServer2")
+            if send != "###":
+                s.sendto(send.encode(), addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
 s.close()

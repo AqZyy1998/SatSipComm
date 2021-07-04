@@ -1,6 +1,7 @@
 import socket
 import os
 
+
 # 启动客户机
 def startClientSip(data):
     startClient = os.system(r"cd F:\VirtualStudioProgram\pjproject-wyh\pjsip-apps\bin")
@@ -16,6 +17,7 @@ def createJsonContent():
         f.write("serverName:" + clientname + "\n")
         f.close()
     return "ip:" + ip + "\n" + "clientName:" + clientname + "\n"
+
 
 address = ('10.112.244.60', 31500)  # 服务端地址和端口
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
