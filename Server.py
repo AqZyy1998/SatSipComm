@@ -1,6 +1,7 @@
 import socket
 import _thread as thread
 import os
+import config
 
 def readFile(filecontent):
     with open("Files/serverFile", "a+") as f:
@@ -15,8 +16,7 @@ def readResponseFromServer2(ResponseFromServer2):
         return "###"
 
 
-global flagA
-flagA = bool(False)
+
 address = ('10.112.244.60', 31500)  # 服务端地址和端口
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind(address)  # 绑定服务端地址和端口
@@ -32,10 +32,9 @@ while True:
     # tempDataRcvFromA = "ClientA:" + data
     thread.start_new_thread(readFile, (data.encode('utf - 8'),))
 
-    flagA = bool(True)
-    global flagB
+    config.flags[0] = 1
     while True:
-        if flagA == bool(True) and flagB == bool(True):
+        if config.flags[0] == 1 and config.flags[1] == 1:
             # send = input('Input: ')
             send = readResponseFromServer2("Files/ResponseFromServer2")
             if send != "###":
