@@ -48,5 +48,6 @@ def mouseAkey():
 if __name__ == "__main__":
     thread.start_new_thread(mouseAkey, ())
     # os.system(r"F:\VirtualStudioProgram\pjproject-wyh\pjsip-apps\bin\pjsua-i386-Win32-vc14-Debug.exe")
-    os.system(r"D:\grad1.5\2021-Lab\sip\pjproject-wyh\pjsip-apps\bin\pjsua-i386-Win32-vc14-Debug.exe")
+    os.system(r"F:\VirtualStudioProgram\pjproject-wyh\pjsip-apps\bin\pjsua-i386-Win32-vc14-Debug.exe")
+
 
