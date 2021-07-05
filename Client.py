@@ -1,5 +1,6 @@
 import socket
 import os
+from config import ClientAIp, ServerIp, ServerPortA
 
 
 # 启动客户机
@@ -10,7 +11,7 @@ def startClientSip(data):
 
 
 def createJsonContent():
-    ip = "10.112.244.61"
+    ip = ClientAIp
     clientname = "clientA"
     with open("Files/requestA", "w") as f:
         f.write("ip:" + ip + "\n")
@@ -19,7 +20,7 @@ def createJsonContent():
     return "ip:" + ip + "\n" + "clientName:" + clientname + "\n"
 
 
-address = ('10.112.244.60', 31500)  # 服务端地址和端口
+address = (ServerIp, ServerPortA)  # 服务端地址和端口
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 while True:
     trigger = createJsonContent()

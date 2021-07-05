@@ -2,10 +2,13 @@ import socket
 import _thread as thread
 import os
 import config
+from config import ServerIp, ServerPortA
+
 
 def readFile(filecontent):
     with open("Files/serverFile", "a+") as f:
         f.write(str(filecontent))
+
 
 def readResponseFromServer2(ResponseFromServer2):
     if os.path.getsize(ResponseFromServer2) != 0:
@@ -17,7 +20,7 @@ def readResponseFromServer2(ResponseFromServer2):
 
 
 def ServerRun():
-    address = ('10.112.244.60', 31500)  # 服务端地址和端口
+    address = (ServerIp, ServerPortA)  # 服务端地址和端口
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(address)  # 绑定服务端地址和端口
     while True:
@@ -42,6 +45,7 @@ def ServerRun():
                 if send != "###":
                     s.sendto(send.encode(), addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
     s.close()
+
 
 if __name__ == '__main__':
     ServerRun()

@@ -1,8 +1,9 @@
 import socket
 import os
+from config import ClientBIp, ServerIp, ServerPortB
 
 def createJsonContent():
-    ip = "10.112.244.62"
+    ip = ClientBIp
     clientname = "clientB"
     with open("Files/requestA", "w") as f:
         f.write("ip:" + ip + "\n")
@@ -11,7 +12,7 @@ def createJsonContent():
     return "ip:" + ip + "\n" + "clientName:" + clientname + "\n"
 
 
-address = ('10.112.244.60', 31501)  # 服务端地址和端口
+address = (ServerIp, ServerPortB)  # 服务端地址和端口
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 while True:
     trigger = createJsonContent()

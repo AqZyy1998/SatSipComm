@@ -1,6 +1,8 @@
 import socket,os
 import _thread as thread
 import config
+from config import ServerIp, ServerPortB
+
 
 def readFile(filecontent):
     with open("Files/serverFile", "a+") as f:
@@ -18,7 +20,7 @@ def readResponseFromServer2(ResponseFromServer2):
 
 
 def ServerBRun():
-    address = ('10.112.244.60', 31501)  # 服务端地址和端口
+    address = (ServerIp, ServerPortB)  # 服务端地址和端口
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(address)  # 绑定服务端地址和端口
     while True:
