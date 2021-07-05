@@ -19,7 +19,7 @@ def jsonTransferToBinary(filename):
         with open(filename + "InBinary", "w") as f:
             f.write(binaryContent)
             f.close()
-        return binaryContent
+        return encodestr
     else:
         return "###"
 

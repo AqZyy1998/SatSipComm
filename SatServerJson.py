@@ -1,4 +1,4 @@
-from config import ServerIp, SatServerIp, ServerJsonPort
+from config import ServerIp, SatServerIp, ServerJsonPort, ObcPort, ObcIp
 import socket
 import _thread as thread
 import base64
@@ -31,20 +31,29 @@ def readResponseFromServer2(ResponseFromServer2):
         return "###"
 
 
+def writeFileFromSatToGround(data, address):
+    with open(address, "a") as f:
+        f.write(data)
+    f.close()
+
+
 def SatServerJsonRun():
     address = (SatServerIp, ServerJsonPort)  # 卫星服务端地址和端口
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(address)  # 绑定服务端地址和端口
     while True:
         data, addr = s.recvfrom(1024)  # 返回数据和接入连接的（客户端）地址 data是string
-        data = data.decode()
+        data = str(data, 'utf - 8')
         if not data:
             break
         print('[Received]', data)
-        # TODO 处理地面发来的数据
-        JsonData = transferBinaryToJson(data)
-
-        send = readResponseFromServer2("Files/ResponseFromServer2")  # send = input.py\n output.py
-        if send != "###":
-            s.sendto(send, addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
+        # TODO 写入一个返回给地面的文件
+        writeContent = "input.py\noutput.py\n"
+        writeFileFromSatToGround(writeContent, "Files/ResponseFromServer2")
+        # ObcAddress = (ObcIp, ObcPort)
+        # s2obc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # s2obc.bind(ObcAddress)
+        # send = readResponseFromServer2("Files/ResponseFromServer2")  # send = input.py\n output.py
+        # if send != "###":
+        #     s2obc.sendto(send, addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
     s.close()

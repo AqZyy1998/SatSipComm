@@ -34,8 +34,9 @@ def ServerBRun():
         # tempDataRcvFromB = "ClientB:" + data
         thread.start_new_thread(readFile, (data.encode('utf - 8'),))
 
-        config.flags[1] = 1
-        config.flags = [config.flags[0], config.flags[1]]
+        if os.path.exists("Files/ResponseFromServer2") and os.path.getsize("Files/ResponseFromServer2") == 19:
+            config.flags[1] = 1
+            config.flags = [config.flags[0], config.flags[1]]
         print("Server B ", config.flags)
         while True:
             if config.flags[0] == 1:
