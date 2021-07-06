@@ -18,3 +18,4 @@ if __name__ == '__main__':
     thread6.start()
     while 1:
         pass
+# thread.context
