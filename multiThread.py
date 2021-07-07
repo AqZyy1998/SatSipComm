@@ -14,3 +14,4 @@ if __name__ == '__main__':
     # thread4.start()
     while 1:
         pass
+# thread.context
