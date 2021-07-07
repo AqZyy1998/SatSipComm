@@ -3,7 +3,20 @@ import socket
 import _thread as thread
 import base64
 import os
+import time
+import numpy
 import transFileType
+
+
+class RemoteObject:
+    def __init__(self):
+        self.runNum = numpy.uint8(0)
+        self.hasInputFile = numpy.uint8(0)
+        self.isDecode = numpy.uint8(0)
+        self.isEncode = numpy.uint8(0)
+        self.hasOutputFile = numpy.uint8(0)
+        self.inputFileLen = numpy.uint8(0)
+        self.encodeFileLen = numpy.uint8(0)
 
 
 def transferBinaryToJson(BinaryData):  # 输入其实为string类型
@@ -37,36 +50,102 @@ def writeFileFromSatToGround(data, address):
     f.close()
 
 
-def isJsonOK(address, data):
+def readRemoteFile(address):
+    with open(address, "r") as f:
+        remoteInfo = f.read()
+        return remoteInfo
+
+
+def writeRemoteFile(address, remoteInfo):
+    try:
+        with open(address, "a") as f:
+            f.write(remoteInfo)
+    except IOError:
+        return False
+    else:
+        return True
+
+
+def isJsonOK(address, remoteObject):
     if not os.path.exists(address):
-        return data
+        return remoteObject
     if not os.path.getsize(address) == 19:
-        return data
-    return data
+        return remoteObject
+    remoteObject.hasOutputFile = numpy.uint8(1)
+    remoteObject.encodeFileLen = numpy.uint(19)
+    print("RECEIVE JSON SUCCESSFULLY")
+    return remoteObject
 
 
+def transferRemoteToStr(remoteObject):
+    remoteInfo = numpy.uint32(0)
+    remoteInfo = numpy.uint32(remoteObject.runNum << 24) | remoteInfo
+    remoteInfo = numpy.uint32(remoteObject.hasInputFile << 22) | remoteInfo
+    remoteInfo = numpy.uint32(remoteObject.isDecode << 20) | remoteInfo
+    remoteInfo = numpy.uint32(remoteObject.isEncode << 18) | remoteInfo
+    remoteInfo = numpy.uint32(remoteObject.hasOutputFile << 16) | remoteInfo
+    remoteInfo = numpy.uint32(remoteObject.inputFileLen << 8) | remoteInfo
+    remoteInfo = numpy.uint32(remoteObject.encodeFileLen) | remoteInfo
+    return remoteInfo
+    
+    
 def SatServerRemoteRun():
-    address = (SatServerIp, ServerRemotePort)  # 卫星服务端地址和端口
+    time_start = time.time()
+    address = (ObcIp, ObcPort)  # OBC地址和端口
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(address)  # 绑定服务端地址和端口
+    s.bind(address)
+    remoteObject = RemoteObject()  # 新建对象
     while True:
-        data, addr = s.recvfrom(1024)  # 返回数据和接入连接的（客户端）地址 data是string
-        data = str(data, 'utf - 8')
-        if not data:
-            break
-        print('[Received]', data)
+        time_run = time.time() - time_start
+        remoteFileName = "Files/remote"
+        if time_run > 5:  # 超过60s发json包
+            jsonFileName = "Files/json"
+        else:
+            jsonFileName = "Files/jsonBackup"
+        # remoteInfo = readRemoteFile(remoteFileName)
+        remoteObject = isJsonOK(jsonFileName, remoteObject)  # 处理遥测包信息
 
-        # 遥测包判断
-        data = isJsonOK("Files/ResponseFromServer2", data)
-
-        # TODO 处理遥测包信息
-        # writeContent = "input.py\noutput.py\n"
-        # writeFileFromSatToGround(writeContent, "Files/ResponseFromServer2")
-        ObcAddress = (ObcIp, ObcPort)
-        s2obc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s2obc.bind(ObcAddress)
-        # send = readResponseFromServer2("Files/ResponseFromServer2")  # send = input.py\n output.py
-        send = transferJsonToBinary(data)
-        if send != "###":
-            s2obc.sendto(send, addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
+        remoteInfo = transferRemoteToStr(remoteObject)  # 封装遥测包
+        if writeRemoteFile(remoteFileName, str(remoteInfo)):
+            try:
+                send2 = int(remoteInfo)
+                sendToData = send2.to_bytes(length=4, byteorder='big', signed=False)
+                # print(send2, remoteInfo, sendToData)
+                s.sendto(sendToData, address)
+            except IOError:
+                print("SENDTO ERROR")
+            # else:
+            #     remoteObject.runNum += 1
+        else:
+            print("WRITE ERROR")
     s.close()
+
+# def SatServerRemoteRunBackup():
+#     address = (SatServerIp, ServerRemotePort)  # 卫星服务端地址和端口
+#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#     s.bind(address)  # 绑定服务端地址和端口
+#     while True:
+#         # data, addr = s.recvfrom(1024)  # 返回数据和接入连接的（客户端）地址 data是string
+#         # data = str(data, 'utf - 8')
+#         # if not data:
+#         #     break
+#         # print('[Received]', data)
+#
+#         # 遥测包判断
+#         data = isJsonOK("Files/remote")
+#
+#         # TODO 处理遥测包信息
+#         # writeContent = "input.py\noutput.py\n"
+#         # writeFileFromSatToGround(writeContent, "Files/ResponseFromServer2")
+#         ObcAddress = (ObcIp, ObcPort)
+#         s2obc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#         s2obc.bind(ObcAddress)
+#         # send = readResponseFromServer2("Files/ResponseFromServer2")  # send = input.py\n output.py
+#         send = transferJsonToBinary(data)
+#         if send != "###":
+#             s2obc.sendto(send, addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
+#     s.close()
+
+
+if __name__ == '__main__':
+    SatServerRemoteRun()

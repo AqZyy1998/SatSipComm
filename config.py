@@ -11,5 +11,5 @@ ServerRemotePort = 31504
 ClientAIp = "10.112.244.61"
 ClientBIp = "10.112.244.62"
 
-ObcIp = "10.28.244.70"
-ObcPort = 31505
+ObcIp = "192.168.200.2"
+ObcPort = 20002
