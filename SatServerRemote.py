@@ -1,10 +1,12 @@
-from config import ServerIp, SatServerIp, ServerRemotePort, ObcPort, ObcIp
+from config import ServerIp, SatServerIp, ServerRemotePort, ObcPort, remoteHeader
 import socket
 import _thread as thread
 import base64
 import os
 import time
 import numpy
+from RemotePackage import RemotePackage
+import binascii
 import transFileType
 
 
@@ -15,7 +17,7 @@ class RemoteObject:
         self.isDecode = numpy.uint8(0)
         self.isEncode = numpy.uint8(0)
         self.hasOutputFile = numpy.uint8(0)
-        self.inputFileLen = numpy.uint8(0)
+        self.CpuTemperature = numpy.uint8(0)
         self.encodeFileLen = numpy.uint8(0)
 
 
@@ -66,7 +68,13 @@ def writeRemoteFile(address, remoteInfo):
         return True
 
 
+def getCPUtemperature() -> int:
+    res = os.popen('vcgencmd measure_temp').readline()
+    return int(float(res.replace("temp=", "").replace("'C\n", "")))
+
+
 def isJsonOK(address, remoteObject):
+    remoteObject.CpuTemperature = numpy.uint8(getCPUtemperature())
     if not os.path.exists(address):
         return remoteObject
     if not os.path.getsize(address) == 19:
@@ -84,41 +92,75 @@ def transferRemoteToStr(remoteObject):
     remoteInfo = numpy.uint32(remoteObject.isDecode << 20) | remoteInfo
     remoteInfo = numpy.uint32(remoteObject.isEncode << 18) | remoteInfo
     remoteInfo = numpy.uint32(remoteObject.hasOutputFile << 16) | remoteInfo
-    remoteInfo = numpy.uint32(remoteObject.inputFileLen << 8) | remoteInfo
+    remoteInfo = numpy.uint32(remoteObject.CpuTemperature << 8) | remoteInfo
     remoteInfo = numpy.uint32(remoteObject.encodeFileLen) | remoteInfo
     return remoteInfo
-    
-    
+
+
+def concatRemoteData(remoteInfo) -> bytes:
+    return remoteInfo + b'\x02' * 14 + b'\xff' * 1006
+
+
+def concatRemotePackage(remotePackage, remoteInfo) -> bytes:
+    # remoteRemain = b'\x02' * 3 + b'\xff' * 1006
+    remotePackage.seqNum = remotePackage.seqNum + 1
+    remotePackage = remotePackage.header + remotePackage.type + \
+        int(remotePackage.seqNum).to_bytes(length=4, byteorder='big', signed=False) + remotePackage.fileNum \
+        + remotePackage.fileLen + remotePackage.offset + remotePackage.dataLen + \
+        remotePackage.crc.encode()
+    return remotePackage + remoteInfo
+
+
+def crc2hex(crc):
+    return '%08x' % (binascii.crc32(binascii.a2b_hex(crc)) & 0xffffffff)
+
+
+def crc32asii(v):
+    return '0x%8x' % (binascii.crc32(v) & 0xffffffff)
+
+
 def SatServerRemoteRun():
     time_start = time.time()
-    address = (ObcIp, ObcPort)  # OBC地址和端口
+    address = (SatServerIp, ServerRemotePort)  # OBC地址和端口
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(address)
     remoteObject = RemoteObject()  # 新建对象
+    remotePackage = RemotePackage()
     while True:
+        recvCtrlData, recvAddr = s.recvfrom(1024)
+        print("recv: ", recvCtrlData)
+        print("addr: ", recvAddr)
+        # TODO 判断内容是否正确
+        if recvCtrlData == remoteHeader:
+            pass
+        else:
+            break
+        time.sleep(1)
         time_run = time.time() - time_start
         remoteFileName = "Files/remote"
         if time_run > 5:  # 超过60s发json包
             jsonFileName = "Files/json"
         else:
             jsonFileName = "Files/jsonBackup"
-        # remoteInfo = readRemoteFile(remoteFileName)
         remoteObject = isJsonOK(jsonFileName, remoteObject)  # 处理遥测包信息
 
         remoteInfo = transferRemoteToStr(remoteObject)  # 封装遥测包
         if writeRemoteFile(remoteFileName, str(remoteInfo)):
             try:
                 send2 = int(remoteInfo)
-                sendToData = send2.to_bytes(length=4, byteorder='big', signed=False)
-                # print(send2, remoteInfo, sendToData)
+                remoteInfo = send2.to_bytes(length=4, byteorder='big', signed=False)
+                remoteInfo = concatRemoteData(remoteInfo)
+                remotePackage.crc = crc32asii(remoteInfo)
+                sendToData = concatRemotePackage(remotePackage, remoteInfo)
+                # print("send data: ", sendToData)
+                address = ("192.168.200.100", ObcPort)
                 s.sendto(sendToData, address)
             except IOError:
                 print("SENDTO ERROR")
-            # else:
-            #     remoteObject.runNum += 1
         else:
             print("WRITE ERROR")
     s.close()
+
 
 # def SatServerRemoteRunBackup():
 #     address = (SatServerIp, ServerRemotePort)  # 卫星服务端地址和端口
