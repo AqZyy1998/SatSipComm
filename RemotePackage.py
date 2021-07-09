@@ -8,6 +8,6 @@ class RemotePackage:
         self.fileNum = b'\x00\x00\x17\x70'
         self.fileLen = b'\x00\x00\x00\x00'
         self.offset = b'\x00\x00\x00\x00\x00\x00'
-        self.dataLen = b'\x00\x00\x00\x00\x00\x00'
-        self.crc = str()
+        self.dataLen = b'\x00\x00\x00\x00\x00\x13'
+        self.crc = bytes()
 

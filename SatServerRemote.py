@@ -7,6 +7,7 @@ import time
 import numpy
 from RemotePackage import RemotePackage
 import binascii
+import doCRC2
 import transFileType
 
 
@@ -107,7 +108,7 @@ def concatRemotePackage(remotePackage, remoteInfo) -> bytes:
     remotePackage = remotePackage.header + remotePackage.type + \
         int(remotePackage.seqNum).to_bytes(length=4, byteorder='big', signed=False) + remotePackage.fileNum \
         + remotePackage.fileLen + remotePackage.offset + remotePackage.dataLen + \
-        remotePackage.crc.encode()
+        remotePackage.crc
     return remotePackage + remoteInfo
 
 
@@ -118,6 +119,11 @@ def crc2hex(crc):
 def crc32asii(v):
     return '0x%8x' % (binascii.crc32(v) & 0xffffffff)
 
+
+def writeRemoteInfo(remoteInfo):
+    with open("Files/remoteInfo", "a") as f:
+        f.write(remoteInfo)
+    f.close()
 
 def SatServerRemoteRun():
     time_start = time.time()
@@ -143,14 +149,15 @@ def SatServerRemoteRun():
         else:
             jsonFileName = "Files/jsonBackup"
         remoteObject = isJsonOK(jsonFileName, remoteObject)  # 处理遥测包信息
-
         remoteInfo = transferRemoteToStr(remoteObject)  # 封装遥测包
         if writeRemoteFile(remoteFileName, str(remoteInfo)):
             try:
                 send2 = int(remoteInfo)
                 remoteInfo = send2.to_bytes(length=4, byteorder='big', signed=False)
                 remoteInfo = concatRemoteData(remoteInfo)
-                remotePackage.crc = crc32asii(remoteInfo)
+                writeRemoteInfo(remoteInfo)
+                remotePackage.crc = doCRC2.getbinasciiCRC("Files/remoteInfo").to_bytes(length=8, byteorder='big', signed=False)
+                # remotePackage.crc = crc32asii(remoteInfo)
                 sendToData = concatRemotePackage(remotePackage, remoteInfo)
                 # print("send data: ", sendToData)
                 address = ("192.168.200.100", ObcPort)
