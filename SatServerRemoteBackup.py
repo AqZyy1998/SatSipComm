@@ -1,6 +1,5 @@
-from config import ServerIp, ServerRemotePort, ObcIp, ObcPort, remoteHeader
-import fcntl
-import struct
+from config import ServerIp, SatServerIp, ServerRemotePort, ObcIp, ObcPort, remoteHeader
+import socket, fcntl, struct
 import _thread as thread
 import base64
 import os
@@ -50,7 +49,7 @@ def readResponseFromServer2(ResponseFromServer2):
 
 
 def writeFileFromSatToGround(data, address):
-    with open(address, "a") as f:
+    with open(address, "w+") as f:
         f.write(data)
     f.close()
 
@@ -83,8 +82,11 @@ def isJsonOK(address, remoteObject):
     if not os.path.getsize(address) == 19:
         return remoteObject
     remoteObject.hasOutputFile = numpy.uint8(1)
-    remoteObject.encodeFileLen = numpy.uint(19)
-    # remoteObject.runNum += 1
+    remoteObject.encodeFileLen = numpy.uint8(19)
+    remoteObject.hasInputFile = numpy.uint8(1)
+    remoteObject.isEncode = numpy.uint8(1)
+    remoteObject.isDecode = numpy.uint8(1)
+    remoteObject.runNum += 1
     print("RECEIVE JSON SUCCESSFULLY")
     return remoteObject
 
@@ -124,29 +126,32 @@ def crc32asii(v):
 
 
 def writeRemoteInfo(remoteInfo):
-    with open("Files/remoteInfo", "a") as f:
+    with open("Files/remoteInfo", "w+") as f:
         f.write(remoteInfo)
     f.close()
-
-
 def get_local_ip(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    inet = fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', ifname[:15]))
+    inet = fcntl.ioctl(s.fileno(), 0x8915, struct.pack("256s", ifname[:15]))
     ret = socket.inet_ntoa(inet[20:24])
     return ret
-
-
+def GetLocalIPByPrefix(prefix):
+    localIP = ''
+    for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+        if ip.startswith(prefix):
+            localIP = ip
+    return localIP
 def SatServerRemoteRun():
     time_start = time.time()
-    hostname = socket.gethostname()
-    SatServerIp = socket.gethostbyname(hostname)
+    # hostname = socket.gethostname()
+    # SatServerIp = socket.gethostbyname(hostname)
+    SatServerIp = GetLocalIPByPrefix("192.168.200")
     print(SatServerIp)
     address = (SatServerIp, ServerRemotePort)  # OBC地址和端口
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(address)
+    remoteObject = RemoteObject()
+    remotePackage = RemotePackage()
     while True:
-        remoteObject = RemoteObject()  # 新建对象
-        remotePackage = RemotePackage()
         recvCtrlData, recvAddr = s.recvfrom(1024)
         print("recv: ", recvCtrlData)
         print("addr: ", recvAddr)
@@ -169,12 +174,13 @@ def SatServerRemoteRun():
                 send2 = int(remoteInfo)
                 remoteInfo = send2.to_bytes(length=4, byteorder='big', signed=False)
                 remoteInfo = concatRemoteData(remoteInfo)
-                writeRemoteInfo(remoteInfo)
+                print("remoteInfo: ", remoteInfo)
+                writeRemoteInfo(str(remoteInfo))
                 remotePackage.crc = doCRC2.getbinasciiCRC("Files/remoteInfo").to_bytes(length=4, byteorder='big', signed=False)
                 # remotePackage.crc = crc32asii(remoteInfo)
                 sendToData = concatRemotePackage(remotePackage, remoteInfo)
                 # print("send data: ", sendToData)
-                address = (ObcIp, ObcPort)
+                address = (recvAddr[0], ObcPort) # 局域网广播，防止OBC IP变动影响接收
                 s.sendto(sendToData, address)
             except IOError:
                 print("SENDTO ERROR")
