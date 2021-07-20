@@ -3,6 +3,7 @@ import fcntl
 import struct
 import _thread as thread
 import base64
+import crcmod
 import os
 import time
 import numpy
@@ -83,8 +84,8 @@ def isJsonOK(address, remoteObject):
     if not os.path.getsize(address) == 19:
         return remoteObject
     remoteObject.hasOutputFile = numpy.uint8(1)
-    remoteObject.encodeFileLen = numpy.uint(19)
-    # remoteObject.runNum += 1
+    remoteObject.encodeFileLen = numpy.uint(18)
+    remoteObject.runNum += 1
     print("RECEIVE JSON SUCCESSFULLY")
     return remoteObject
 
@@ -101,8 +102,9 @@ def transferRemoteToStr(remoteObject):
     return remoteInfo
 
 
-def concatRemoteData(remoteInfo) -> bytes:
-    return remoteInfo + b'\x02' * 14 + b'\xff' * 1006
+def concatRemoteData(remoteInfo):
+    result = remoteInfo + b'\x02' * 14 + b'\xff' * 1006
+    return hex(result)
 
 
 def concatRemotePackage(remotePackage, remoteInfo) -> bytes:
@@ -170,7 +172,7 @@ def SatServerRemoteRun():
                 remoteInfo = send2.to_bytes(length=4, byteorder='big', signed=False)
                 remoteInfo = concatRemoteData(remoteInfo)
                 writeRemoteInfo(remoteInfo)
-                remotePackage.crc = doCRC2.getbinasciiCRC("Files/remoteInfo").to_bytes(length=4, byteorder='big', signed=False)
+                remotePackage.crc = doCRC2.getbinasciiCRC("Files/remoteInfo")
                 # remotePackage.crc = crc32asii(remoteInfo)
                 sendToData = concatRemotePackage(remotePackage, remoteInfo)
                 # print("send data: ", sendToData)
