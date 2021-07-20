@@ -160,6 +160,7 @@ def SatServerRemoteRun():
         time.sleep(1)
         time_run = time.time() - time_start
         remoteFileName = "Files/remote"
+        # TODO 判断上传的文件存不存在
         if time_run > 5:  # 超过60s发json包
             jsonFileName = "Files/json"
         else:
