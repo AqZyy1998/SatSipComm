@@ -1,5 +1,6 @@
 import socket
 import os
+import time
 from config import ClientBIp, ServerIp, ServerPortB
 
 def createJsonContent():
@@ -20,6 +21,7 @@ while True:
     filename, addr = s.recvfrom(1024)  # 返回数据和接入连接的（服务端）地址
     filename = filename.decode()
     print('[Recieved]', filename)
+    time.sleep(2)
     os.system(r"python " + filename)  # filename带py
     # startClientSip(filename)
     if trigger == '###':  # 自定义结束字符串

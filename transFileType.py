@@ -36,6 +36,7 @@ def BinaryTransferToJson(filename):
         f.write(str(jsonContent, 'utf - 8'))
         f.close()
 
+
 if __name__ == '__main__':
     jsonTransferToBinary("Files/serverFile")
     BinaryTransferToJson("Files/serverFileInBinary")

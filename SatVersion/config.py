@@ -1,10 +1,10 @@
-flags = [0, 0]
+flags = [0, 0, 0]
 
 ServerIp = "10.112.244.60"
 ServerPortA = 31500
 ServerPortB = 31501
 
-SatServerIp = "192.168.200.36"
+SatServerIp = "192.168.200.17"
 ServerJsonPort = 31503
 ServerRemotePort = 20002
 

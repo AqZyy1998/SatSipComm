@@ -1,5 +1,5 @@
 from config import ServerIp, SatServerIp, ServerRemotePort, ObcIp, ObcPort, remoteHeader
-import socket, fcntl, struct
+# import socket, fcntl, struct
 import _thread as thread
 import base64
 import os
@@ -82,7 +82,7 @@ def isJsonOK(address, remoteObject):
     if not os.path.getsize(address) == 19:
         return remoteObject
     remoteObject.hasOutputFile = numpy.uint8(1)
-    remoteObject.encodeFileLen = numpy.uint8(19)
+    remoteObject.encodeFileLen = numpy.uint8(18)
     remoteObject.hasInputFile = numpy.uint8(1)
     remoteObject.isEncode = numpy.uint8(1)
     remoteObject.isDecode = numpy.uint8(1)
@@ -103,9 +103,9 @@ def transferRemoteToStr(remoteObject):
     return remoteInfo
 
 
-def concatRemoteData(remoteInfo) -> bytes:
-    return remoteInfo + b'\x02' * 14 + b'\xff' * 1006
-
+def concatRemoteData(remoteInfo):
+    result = remoteInfo + b'\x02' * 14 + b'\xff' * 1006
+    return result.hex()
 
 def concatRemotePackage(remotePackage, remoteInfo) -> bytes:
     # remoteRemain = b'\x02' * 3 + b'\xff' * 1006
@@ -129,11 +129,11 @@ def writeRemoteInfo(remoteInfo):
     with open("Files/remoteInfo", "w+") as f:
         f.write(remoteInfo)
     f.close()
-def get_local_ip(ifname):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    inet = fcntl.ioctl(s.fileno(), 0x8915, struct.pack("256s", ifname[:15]))
-    ret = socket.inet_ntoa(inet[20:24])
-    return ret
+# def get_local_ip(ifname):
+#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#     inet = fcntl.ioctl(s.fileno(), 0x8915, struct.pack("256s", ifname[:15]))
+#     ret = socket.inet_ntoa(inet[20:24])
+#     return ret
 def GetLocalIPByPrefix(prefix):
     localIP = ''
     for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
@@ -145,29 +145,72 @@ def SatServerRemoteRun():
     # hostname = socket.gethostname()
     # SatServerIp = socket.gethostbyname(hostname)
     SatServerIp = GetLocalIPByPrefix("192.168.200")
-    print(SatServerIp)
-    address = (SatServerIp, ServerRemotePort)  # OBC地址和端口
+    # print(SatServerIp)
+    # address = (SatServerIp, ServerRemotePort)  # 卫星树莓派地址和端口
+    address = ("127.0.0.1", 20004)
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(address)
-    remoteObject = RemoteObject()
-    remotePackage = RemotePackage()
+    remoteObject = RemoteObject()  # 初始化数据段
+    remotePackage = RemotePackage()  # 初始化遥测包头
+    complete_time = -1
     while True:
-        recvCtrlData, recvAddr = s.recvfrom(1024)
+        recvCtrlData, recvAddr = s.recvfrom(1024) # OBC地址和端口，遥测包request传入
         print("recv: ", recvCtrlData)
         print("addr: ", recvAddr)
-        # TODO 判断内容是否正确
-        if recvCtrlData == remoteHeader:
-            pass
-        else:
-            break
-        time.sleep(1)
-        time_run = time.time() - time_start
+        # 判断内容是否正确
+        # if recvCtrlData == remoteHeader:
+        #     pass
+        # else:
+        #     break
+        time.sleep(0.005)
+        # time_run = time.time() - time_start
         remoteFileName = "Files/remote"
-        if time_run > 5:  # 超过60s发json包
-            jsonFileName = "Files/downloadJson"
+        # 重复实验
+        ################################################################################
+        # if 1627442047 > complete_time > 180 and remoteObject.encodeFileLen == numpy.uint(18):
+        #     remoteObject = RemoteObject()
+        #     complete_time = -1
+        #     time_start = time.time()
+        #     time_run = time.time() - time_start
+        #     if os.path.exists("Files/uploadJson"):
+        #         os.remove("Files/uploadJson")
+        # elif complete_time != -1 and remoteObject.encodeFileLen == numpy.uint(18):
+        #     complete_time = time.time() - complete_time
+        # if complete_time == -1 and remoteObject.encodeFileLen == numpy.uint(18):
+        #     complete_time = time.time()
+        ################################################################################
+
+        # 数据段判定
+        ################################################################################
+        # 判定是否有输入文件2bit
+        if os.path.exists("Files/uploadJson"):
+            remoteObject.hasInputFile = numpy.uint8(1)  # 成功置为1
+            # 解码uploadJson
+            # 生成下传json data
+            # 编码下传json
+            # 生成下传的json文件(把根目录下的json内容写入Files目录下的json文件)
+            with open("downloadJson", "r+") as f:
+                downloadJson = f.read()
+            with open("Files/downloadJson", "w+") as f:
+                f.write(downloadJson)
+            # 判定输出文件是否生成
+            if os.path.exists("Files/downlaodJson") and os.path.getsize("Files/downloadJson") == 18:
+                remoteObject.hasOutputFile = numpy.uint8(1)  # 成功置为1
+                remoteObject.encodeFileLen = numpy.uint8(18)  # 下传文件长度
+                remoteObject.isDecode = numpy.uint8(1)  # 解码uploadJson
+                remoteObject.isEncode = numpy.uint8(1)  # 编码下传json
+            else:
+                remoteObject.hasOutputFile = numpy.uint8(2)  # 失败置为2
         else:
-            jsonFileName = "Files/jsonBackup"
-        remoteObject = isJsonOK(jsonFileName, remoteObject)  # 处理遥测包信息
+            remoteObject.hasInputFile = numpy.uint8(2)  # 失败置为2
+        remoteObject.CpuTemperature = numpy.uint8(getCPUtemperature())  # 树莓派温度
+        remoteObject.runNum += 1  # 服务运行次数+1
+        ################################################################################
+        # if os.path.exists("Files/uploadJson"):
+        #     jsonFileName = "Files/downloadJson"
+        # else:
+        #     jsonFileName = "Files/jsonBackup"
+        # remoteObject = isJsonOK(jsonFileName, remoteObject)  # 处理遥测包信息
         remoteInfo = transferRemoteToStr(remoteObject)  # 封装遥测包
         if writeRemoteFile(remoteFileName, str(remoteInfo)):
             try:
@@ -176,9 +219,9 @@ def SatServerRemoteRun():
                 remoteInfo = concatRemoteData(remoteInfo)
                 print("remoteInfo: ", remoteInfo)
                 writeRemoteInfo(str(remoteInfo))
-                remotePackage.crc = doCRC2.getbinasciiCRC("Files/remoteInfo").to_bytes(length=4, byteorder='big', signed=False)
+                remotePackage.crc = doCRC2.getbinasciiCRC("Files/remoteInfo")
                 # remotePackage.crc = crc32asii(remoteInfo)
-                sendToData = concatRemotePackage(remotePackage, remoteInfo)
+                sendToData = concatRemotePackage(remotePackage, bytes.fromhex(remoteInfo))
                 # print("send data: ", sendToData)
                 address = (recvAddr[0], ObcPort) # 局域网广播，防止OBC IP变动影响接收
                 s.sendto(sendToData, address)
@@ -186,34 +229,7 @@ def SatServerRemoteRun():
                 print("SENDTO ERROR")
         else:
             print("WRITE ERROR")
-    s.close()
-
-
-# def SatServerRemoteRunBackup():
-#     address = (SatServerIp, ServerRemotePort)  # 卫星服务端地址和端口
-#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#     s.bind(address)  # 绑定服务端地址和端口
-#     while True:
-#         # data, addr = s.recvfrom(1024)  # 返回数据和接入连接的（客户端）地址 data是string
-#         # data = str(data, 'utf - 8')
-#         # if not data:
-#         #     break
-#         # print('[Received]', data)
-#
-#         # 遥测包判断
-#         data = isJsonOK("Files/remote")
-#
-#         # TODO 处理遥测包信息
-#         # writeContent = "input.py\noutput.py\n"
-#         # writeFileFromSatToGround(writeContent, "Files/ResponseFromServer2")
-#         ObcAddress = (ObcIp, ObcPort)
-#         s2obc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#         s2obc.bind(ObcAddress)
-#         # send = readResponseFromServer2("Files/ResponseFromServer2")  # send = input.py\n output.py
-#         send = transferJsonToBinary(data)
-#         if send != "###":
-#             s2obc.sendto(send, addr)  # UDP 是无状态连接，所以每次连接都需要给出目的地址
-#     s.close()
+    # s.close()
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 import threading
-import Server, ServerB, ServerJson, ServerRemote, SatServerJson, SatServerRemote
+import Server, ServerB
 from Server import *
 from ServerB import *
 
@@ -14,4 +14,3 @@ if __name__ == '__main__':
     # thread4.start()
     while 1:
         pass
-# thread.context
