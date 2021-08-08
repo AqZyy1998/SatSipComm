@@ -50,14 +50,13 @@ def get_cpu_temperature() -> int:
 
 def modify_sip_data(_telemeter_sip_data, last_lab_num):
     ##### 一轮实验结束 & 新实验重置各数据段 #####
-    with open("Files/calculator", "a+") as f:
-        _lab_num = f.read()
-    lab_num = len(_lab_num)
+    lab_num = os.path.getsize("Files/calculator") if os.path.exists("Files/calculator") else 0
     if lab_num != last_lab_num and not os.path.exists("Files/uploadJson") and not os.path.exists("Files/downloadJson"):
         last_lab_num = lab_num
+        _telemeter_sip_data = TelemeterSipData()
         telemeter_sip_data = bytes(_telemeter_sip_data.concat_data())
         print("Round Over", _telemeter_sip_data.__dict__)
-        return telemeter_sip_data, last_lab_num
+        return telemeter_sip_data, last_lab_num, _telemeter_sip_data
 
     ##### 遥测运行次数叠加 #####
     _telemeter_sip_data.run_number += 1
@@ -96,7 +95,7 @@ def modify_sip_data(_telemeter_sip_data, last_lab_num):
     print(_telemeter_sip_data.__dict__)
 
     telemeter_sip_data = bytes(_telemeter_sip_data.concat_data())
-    return telemeter_sip_data, last_lab_num
+    return telemeter_sip_data, last_lab_num, _telemeter_sip_data
 
 
 def create_telemeter(telemeter, _telemeter_sip_data, last_lab_num):
@@ -110,7 +109,7 @@ def create_telemeter(telemeter, _telemeter_sip_data, last_lab_num):
     telemeter.data_length = b'\x00\x00\x00\x08'
 
     ##### DATA(更新sip data) #####
-    telemeter_sip_data, last_lab_num = modify_sip_data(_telemeter_sip_data, last_lab_num)
+    telemeter_sip_data, last_lab_num, _telemeter_sip_data = modify_sip_data(_telemeter_sip_data, last_lab_num)
     telemeter.data = telemeter_sip_data + b'\xff' * 1020
 
     ##### CRC(DATA 1024作为输入) #####
@@ -119,7 +118,7 @@ def create_telemeter(telemeter, _telemeter_sip_data, last_lab_num):
     telemeter.crc = bytes.fromhex(_crc)
 
     resp = telemeter.header + telemeter.packet_type + sequence_num_concat + telemeter.file_num + telemeter.file_length + telemeter.data_offset + telemeter.data_length + telemeter.crc + telemeter.data
-    return resp, last_lab_num
+    return resp, last_lab_num, _telemeter_sip_data
 
 
 def main_logic():
@@ -152,7 +151,7 @@ def main_logic():
         logging.info("telemeter request = %s; obc address = %s; pi address = %s", telemeter_req, obc_address, pi_address)
 
         ##### 生成遥测回复 #####
-        telemeter_resp, last_lab_num = create_telemeter(telemeter, _telemeterSipData, last_lab_num)
+        telemeter_resp, last_lab_num, _telemeterSipData = create_telemeter(telemeter, _telemeterSipData, last_lab_num)
 
         ##### 发送遥测回复给OBC #####
         s.sendto(telemeter_resp, obc_address)
