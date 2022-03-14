@@ -1,6 +1,6 @@
 flags = [0, 0]
 
-ServerIp = "10.112.244.60"
+ServerIp = "10.42.0.1"
 ServerPortA = 31500
 ServerPortB = 31501
 
@@ -8,8 +8,8 @@ SatServerIp = "192.168.200.36"
 ServerJsonPort = 31503
 ServerRemotePort = 20002
 
-ClientAIp = "10.112.244.61"
-ClientBIp = "10.112.244.62"
+ClientAIp = "10.42.0.61"
+ClientBIp = "10.42.0.62"
 
 ObcIp = "192.168.200.100"
 ObcPort = 20002
